@@ -29,9 +29,6 @@ namespace rmsft.mptWrapper
         [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr openmpt_module_ext_get_module(IntPtr ModuleEXT);
 
-        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl, EntryPoint = "openmpt_module_ext_interface_interactive")]
-        internal static extern int set_channel_volume(IntPtr ModuleEXT, int channel, double volume);
-
         [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void openmpt_module_destroy(IntPtr module);
 
@@ -43,6 +40,22 @@ namespace rmsft.mptWrapper
 
         [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
         internal static extern double openmpt_module_set_position_order_row(IntPtr module, int order, int row);
+
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_get_num_channels(IntPtr module);
+
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_get_num_subsongs(IntPtr module);
+
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_get_num_orders(IntPtr module);
+
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_get_num_patterns(IntPtr module);
+
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_get_pattern_num_rows(IntPtr module, int pattern);
+
 
 
         [StructLayout(LayoutKind.Sequential)]
