@@ -18,7 +18,7 @@ namespace MPTester
 
             Task.Run(() => ModuleAPI.StartModuleStream(moduleStd, 5));
             Console.WriteLine("This module has 6 sub songs and 17 channels.");
-            Console.WriteLine("Commands:\r\n\texit\r\n\tfadeout <int ch>\r\n\tfadein <int ch>\r\n\tswap <int index>\r\n\tnav <int order> <int row>");
+            Console.WriteLine("Commands:\r\n\texit\r\n\tfadeout <int ch>\r\n\tfadein <int ch>\r\n\tswap <int SongIndex>\r\n\tnav <int order> <int row>");
             Console.WriteLine("Starting command thread yall.");
 
             while (true)
