@@ -17,8 +17,11 @@ namespace MPTester
             Console.WriteLine("Starting module stream thread yall.");
 
             Task.Run(() => ModuleAPI.StartModuleStream(moduleStd, 5));
-            Console.WriteLine("This module has 6 sub songs and 17 channels.");
-            Console.WriteLine("Commands:\r\n\texit\r\n\tfadeout <int ch>\r\n\tfadein <int ch>\r\n\tswap <int SongIndex>\r\n\tnav <int order> <int row>");
+
+            int tch = ModuleAPI.GetChannelCount(moduleStd);
+            int tss = ModuleAPI.GetSongCount(moduleStd);
+            Console.WriteLine("This module has {0} sub songs and {1} channels.",tss,tch);
+            Console.WriteLine("Commands:\r\n\texit\r\n\tfadeout <int ch>\r\n\tfadein <int ch>\r\n\tswap <int SongIndex>\r\n\tfswap <int SongIndex>\r\n\tnav <int order> <int row>");
             Console.WriteLine("Starting command thread yall.");
 
             while (true)
@@ -38,7 +41,8 @@ namespace MPTester
 
                     Console.WriteLine("Attempting fadeout for channel {0}", ch);
 
-                    ModuleAPI.ChannelFadeOut(moduleExt, ch);
+                    ModuleAPI.FadeChannelVolume(moduleExt, ch, 0, 0.375);
+
                 }
                 if (line.StartsWith("fadein"))
                 {
@@ -48,7 +52,18 @@ namespace MPTester
 
                     Console.WriteLine("Attempting fadein for channel {0}", ch);
 
-                    ModuleAPI.ChannelFadeIn(moduleExt, ch);
+                    ModuleAPI.FadeChannelVolume(moduleExt, ch,1,0.375);
+                }
+
+                if (line.StartsWith("fswap"))
+                {
+                    string arg = line.Replace("fswap", "").Trim();
+
+                    bool s = int.TryParse(arg, out int ss);
+
+                    Console.WriteLine("Fading to song {0}", ss);
+
+                    ModuleAPI.FadeToSubSong(moduleStd,moduleExt, ss,1);
                 }
 
                 if (line.StartsWith("swap"))
@@ -59,7 +74,7 @@ namespace MPTester
 
                     Console.WriteLine("switching to song {0}", ss);
 
-                    Console.WriteLine(ModuleAPI.SetSubSong(moduleStd, ss));
+                    ModuleAPI.SetSubSong(moduleStd,ss);
                 }
 
                 if (line.StartsWith("nav"))
