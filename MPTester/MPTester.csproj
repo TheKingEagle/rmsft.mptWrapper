@@ -53,7 +53,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\rmsft.libopenmpt\rmsft.mptWrapper.csproj">
+    <ProjectReference Include="..\rmsft.mptWrapper\rmsft.mptWrapper.csproj">
       <Project>{1cf9d89c-09a2-41ca-b55c-33cdc096f0b3}</Project>
       <Name>rmsft.mptWrapper</Name>
     </ProjectReference>
