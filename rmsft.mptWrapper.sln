@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.32510.428
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rmsft.mptWrapper", "rmsft.libopenmpt\rmsft.mptWrapper.csproj", "{1CF9D89C-09A2-41CA-B55C-33CDC096F0B3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rmsft.mptWrapper", "rmsft.mptWrapper\rmsft.mptWrapper.csproj", "{1CF9D89C-09A2-41CA-B55C-33CDC096F0B3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MPTester", "MPTester\MPTester.csproj", "{61836D4A-3047-499C-81A9-57BFB5916092}"
 EndProject
