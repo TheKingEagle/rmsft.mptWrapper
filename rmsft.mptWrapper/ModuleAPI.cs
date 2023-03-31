@@ -8,13 +8,16 @@ namespace rmsft.mptWrapper
 {
     using NAudio.Wave;
     using System;
+    using System.Diagnostics;
     using System.Runtime.InteropServices;
     using System.Threading;
     using static MPTInterops;
+    //TODO: Write a module object for OOP paradigm
     public static class ModuleAPI
     {
 
         private static Mutex moduleMutex = new Mutex();
+
         /// <summary>
         /// Load an openMPT module from file
         /// </summary>
@@ -49,8 +52,6 @@ namespace rmsft.mptWrapper
             return openmpt_module_ext_get_module(mod_ext);
         }
 
-        
-        
         /// <summary>
         /// Starts a module stream that loops indefinitely, on the calling thread.
         /// 
@@ -109,62 +110,130 @@ namespace rmsft.mptWrapper
 
         }
 
-
         #region libopenmpt-ext Interactives
+
+
         /// <summary>
-        /// TODO: Fade out a channel. (it just hard sets 0 right now)
-        /// Pattern takes priority; ie. if pattern has channel volume parameters, those get used, and will override fade.
+        /// Fade the volume of the channel to the target volume.
         /// </summary>
         /// <param name="mod_ext">The handle to the extended module</param>
-        /// <param name="channel">channel range from 0 to (however many channels in the module)</param>
-        public static void ChannelFadeOut(IntPtr mod_ext, int channel)
+        /// <param name="channel">channel index</param>
+        /// <param name="targetVolume">a valid number between 0 and 1</param>
+        /// <param name="durationInSeconds">a value greater than zero.</param>
+        /// <returns></returns>
+        public static double FadeChannelVolume(IntPtr mod_ext, int channel, double targetVolume, double fade_seconds)
         {
-            moduleMutex.WaitOne();
+            if (fade_seconds <= 0)
+            {
+                fade_seconds = 0.001;
+            }
+
             IntPtr interfacePtr = Marshal.AllocHGlobal(Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
             bool result = openmpt_module_ext_get_interface(mod_ext, "interactive", interfacePtr, (UIntPtr)Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
             if (result)
             {
-                Console.WriteLine("Success? {0}", channel);
-                openmpt_module_ext_interface_interactive interfaceData = Marshal.PtrToStructure<openmpt_module_ext_interface_interactive>(interfacePtr);
-                interfaceData.set_channel_volume(mod_ext, channel, 0);
 
-                for (int i = 0; i < 17; i++)
+                openmpt_module_ext_interface_interactive interfaceData = Marshal.PtrToStructure<openmpt_module_ext_interface_interactive>(interfacePtr);
+                // Calculate volume increment per millisecond
+                double OldVolume = interfaceData.get_channel_volume(mod_ext, channel);
+                if(targetVolume - OldVolume == 0)
                 {
-                    Console.WriteLine("New vol channel {0}: {1}", i, interfaceData.get_channel_volume(mod_ext, i));
+                    Console.WriteLine("Target volume isn't different.");
+                    return OldVolume;
                 }
+                double active = OldVolume;
+                double volumeIncrement = (targetVolume - OldVolume) / (fade_seconds * 1000);
+                int interval = 60; // in milliseconds
+                double incrementPerInterval = volumeIncrement * interval;
+
+                // Start a timer to update the volume at regular intervals
+                Stopwatch s = new Stopwatch();
+                s.Start();
+                Timer tt = null;
+                tt = new Timer(_ => 
+                {
+                    moduleMutex.WaitOne();
+                    double currentVolume = active;
+                    double newVolume = currentVolume + incrementPerInterval;
+                    if (volumeIncrement > 0 && newVolume > targetVolume || volumeIncrement < 0 && newVolume < targetVolume)
+                    {
+                        newVolume = targetVolume;
+                        tt.Dispose();
+                        s.Stop();
+                        Console.WriteLine("Channel fade completed in {0} ms", s.ElapsedMilliseconds);
+                    }
+                    active = newVolume;
+                    interfaceData.set_channel_volume(mod_ext, channel, active);
+                    moduleMutex.ReleaseMutex();
+                },null,0,interval);
+                Marshal.FreeHGlobal(interfacePtr);
+                return OldVolume;
             }
-            Marshal.FreeHGlobal(interfacePtr);
-            moduleMutex.ReleaseMutex();
+            else
+            {
+                return 1;//default 1 if something blows up.
+            }
         }
 
         /// <summary>
-        /// TODO: Fade in a channel. (it just hard sets 1 right now)
-        /// Pattern takes priority; ie. if pattern has channel volume parameters, those get used, and will override fade.
+        /// Switch songs but fade out the current song.
+        /// Pattern commands take priority here.
         /// </summary>
-        /// <param name="mod_ext">The handle to the extended module</param>
-        /// <param name="channel">channel range from 0 to (however many channels in the module)</param>
-        public static void ChannelFadeIn(IntPtr mod_ext, int channel)
+        /// <param name="mod_std">handle to your module.</param>
+        /// <param name="mod_ext">handle to your ext-module.</param>
+        /// <param name="target">the target song index.</param>
+        /// <param name="fade_seconds">how long in seconds the fade should be.</param>
+        public static void FadeToSubSong(IntPtr mod_std, IntPtr mod_ext, int target,double fade_seconds)
         {
-            moduleMutex.WaitOne();
+            
             IntPtr interfacePtr = Marshal.AllocHGlobal(Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
             bool result = openmpt_module_ext_get_interface(mod_ext, "interactive", interfacePtr, (UIntPtr)Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
             if (result)
             {
-                Console.WriteLine("Success? {0}", channel);
-                openmpt_module_ext_interface_interactive interfaceData = Marshal.PtrToStructure<openmpt_module_ext_interface_interactive>(interfacePtr);
-                interfaceData.set_channel_volume(mod_ext, channel, 1);
 
-                for (int i = 0; i < 17; i++)
-                {
-                    Console.WriteLine("New vol channel {0}: {1}", i, interfaceData.get_channel_volume(mod_ext, i));
-                }
+                openmpt_module_ext_interface_interactive interfaceData = Marshal.PtrToStructure<openmpt_module_ext_interface_interactive>(interfacePtr);
+
+                // Calculate volume increment per millisecond
+                double OldVolume = 1;
+                double active = OldVolume;
+                double volumeIncrement = (0 - OldVolume) / (fade_seconds * 1000);
+                int interval = 60; // in milliseconds
+                double incrementPerInterval = volumeIncrement * interval;
+                Stopwatch s = new Stopwatch();
+                // Start a timer to update the volume at regular intervals
+                Timer tt = null;
+                 tt = new Timer(_=> {
+                    double currentVolume = active;
+                    double newVolume = currentVolume + incrementPerInterval;
+                    if (volumeIncrement <= 0 && newVolume <= 0)
+                    {
+
+                        moduleMutex.WaitOne();
+                        openmpt_module_select_subsong(mod_std, target);
+                        interfaceData.set_global_volume(mod_ext, 1);
+                        moduleMutex.ReleaseMutex();
+                        s.Stop();
+                        Console.WriteLine("Executed fadeout in {0} ms", s.ElapsedMilliseconds);
+                        tt.Dispose();
+                    }
+                    else
+                    {
+                        active = newVolume;
+                        moduleMutex.WaitOne();
+                        interfaceData.set_global_volume(mod_ext, active);
+                        moduleMutex.ReleaseMutex();
+
+
+                    }
+
+                },null, 0, interval);
+                
+                s.Start();
+                Marshal.FreeHGlobal(interfacePtr);
             }
-            Marshal.FreeHGlobal(interfacePtr);
-            moduleMutex.ReleaseMutex();
         }
 
         #endregion
-
 
         #region libopenmpt interactives
         public static bool SetSubSong(IntPtr mod_std, int index)
@@ -183,6 +252,14 @@ namespace rmsft.mptWrapper
 
         }
 
+        #endregion
+
+        #region Module Info
+        public static int GetChannelCount(IntPtr mod_std) => openmpt_module_get_num_channels(mod_std);
+        public static int GetSongCount(IntPtr mod_std) => openmpt_module_get_num_subsongs(mod_std);
+        public static int GetPatternCount(IntPtr mod_std) => openmpt_module_get_num_patterns(mod_std);
+        public static int GetPatternRowCount(IntPtr mod_std,int pattern_index) => openmpt_module_get_pattern_num_rows(mod_std,pattern_index);
+        public static int GetOrderCount(IntPtr mod_std) => openmpt_module_get_num_orders(mod_std);
         #endregion
     }
 
