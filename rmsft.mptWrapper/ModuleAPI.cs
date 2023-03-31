@@ -13,6 +13,8 @@ namespace rmsft.mptWrapper
     using static MPTInterops;
     public static class ModuleAPI
     {
+
+        private static Mutex moduleMutex = new Mutex();
         /// <summary>
         /// Load an openMPT module from file
         /// </summary>
@@ -72,6 +74,8 @@ namespace rmsft.mptWrapper
 
             while (true)
             {
+                moduleMutex.WaitOne();
+
                 // Read the next stereo sample block from the module
                 var buffer = new short[4096];
                 //Why is this the way it is? 44100 sample rate, but 2 channels? and what is count?
@@ -83,7 +87,7 @@ namespace rmsft.mptWrapper
                     Console.WriteLine("DONE");
 
                     openmpt_module_set_position_seconds(mod_std, 0);
-                    continue;
+                    break;
                 }
                 
                 var bytes = new byte[samplesRead * sizeof(short)];
@@ -100,7 +104,7 @@ namespace rmsft.mptWrapper
                     waveOut.Init(waveProvider);
                     waveOut.Play();
                 }
-
+                moduleMutex.ReleaseMutex();
             }
 
         }
@@ -115,6 +119,7 @@ namespace rmsft.mptWrapper
         /// <param name="channel">channel range from 0 to (however many channels in the module)</param>
         public static void ChannelFadeOut(IntPtr mod_ext, int channel)
         {
+            moduleMutex.WaitOne();
             IntPtr interfacePtr = Marshal.AllocHGlobal(Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
             bool result = openmpt_module_ext_get_interface(mod_ext, "interactive", interfacePtr, (UIntPtr)Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
             if (result)
@@ -129,6 +134,7 @@ namespace rmsft.mptWrapper
                 }
             }
             Marshal.FreeHGlobal(interfacePtr);
+            moduleMutex.ReleaseMutex();
         }
 
         /// <summary>
@@ -139,6 +145,7 @@ namespace rmsft.mptWrapper
         /// <param name="channel">channel range from 0 to (however many channels in the module)</param>
         public static void ChannelFadeIn(IntPtr mod_ext, int channel)
         {
+            moduleMutex.WaitOne();
             IntPtr interfacePtr = Marshal.AllocHGlobal(Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
             bool result = openmpt_module_ext_get_interface(mod_ext, "interactive", interfacePtr, (UIntPtr)Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
             if (result)
@@ -153,6 +160,7 @@ namespace rmsft.mptWrapper
                 }
             }
             Marshal.FreeHGlobal(interfacePtr);
+            moduleMutex.ReleaseMutex();
         }
 
         #endregion
@@ -161,12 +169,18 @@ namespace rmsft.mptWrapper
         #region libopenmpt interactives
         public static bool SetSubSong(IntPtr mod_std, int index)
         {
-            return openmpt_module_select_subsong(mod_std, index);
+            moduleMutex.WaitOne();
+            bool f = openmpt_module_select_subsong(mod_std, index);
+            moduleMutex.ReleaseMutex();
+            return f;
         }
 
         public static void SetOrderRow(IntPtr mod_std, int order, int row)
         {
+            moduleMutex.WaitOne();
             openmpt_module_set_position_order_row(mod_std, order, row);
+            moduleMutex.ReleaseMutex();
+
         }
 
         #endregion
