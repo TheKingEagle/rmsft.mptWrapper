@@ -15,8 +15,9 @@ namespace rmsft.mptWrapper
     //TODO: Write a module object for OOP paradigm
     public static class ModuleAPI
     {
-
+        public static event EventHandler<PatternEventArgs> PatternStarted;
         private static Mutex moduleMutex = new Mutex();
+        private static bool firedPatstart = false;
 
         /// <summary>
         /// Load an openMPT module from file
@@ -63,6 +64,8 @@ namespace rmsft.mptWrapper
         {
             
             openmpt_module_set_repeat_count(mod_std, -1);
+            openmpt_module_ctl_set_boolean(mod_std, "seek.sync_samples", true);
+            openmpt_module_ctl_set_text(mod_std, "play.at_end", "continue");
             // Initialize the output device and stream provider
             var waveOut = new WaveOutEvent();
             waveOut.DesiredLatency = 60;
@@ -81,6 +84,18 @@ namespace rmsft.mptWrapper
                 var buffer = new short[4096];
                 //Why is this the way it is? 44100 sample rate, but 2 channels? and what is count?
                 var samplesRead = openmpt_module_read_interleaved_stereo(mod_std,88200, 2, buffer);
+
+                int row = openmpt_module_get_current_row(mod_std);
+
+                if(row == 0 && !firedPatstart)
+                {
+                    Task.Run(()=>PatternStarted?.Invoke(mod_std, new PatternEventArgs(openmpt_module_get_current_pattern(mod_std), openmpt_module_get_current_order(mod_std))));//spawn new event thread because pain?
+                    firedPatstart = true;
+                }
+                if(row > 0)
+                {
+                    firedPatstart = false;
+                }
 
                 // If there are no more samples to read, restart the subsong, but this is just debug.
                 if (samplesRead == 0)

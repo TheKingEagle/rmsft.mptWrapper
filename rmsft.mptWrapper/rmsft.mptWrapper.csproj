@@ -75,6 +75,7 @@
     <Compile Include="ModuleAPI.cs" />
     <Compile Include="module_ext_interactive_interface.cs" />
     <Compile Include="MPTInterops.cs" />
+    <Compile Include="PatternEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

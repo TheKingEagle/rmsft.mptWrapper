@@ -56,6 +56,18 @@ namespace rmsft.mptWrapper
         [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
         internal static extern int openmpt_module_get_pattern_num_rows(IntPtr module, int pattern);
 
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_get_current_row(IntPtr module);
+
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_get_current_pattern(IntPtr module);
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_get_current_order(IntPtr module);
+
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_ctl_set_boolean(IntPtr module,string ctl, bool value);
+        [DllImport(libOpenMptPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int openmpt_module_ctl_set_text(IntPtr module, string ctl, string value);
 
 
         [StructLayout(LayoutKind.Sequential)]
