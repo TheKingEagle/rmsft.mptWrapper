@@ -9,11 +9,21 @@ namespace MPTester
 {
     class Program
     {
+        static bool triggerCalled = false;
+        static bool triggerRan = false;
+        static IntPtr moduleExt;
+        static IntPtr moduleStd;
+        static int nextsub = 0;
+        private static bool triggerCalled1;
+        private static bool triggerRan1;
+
         static void Main(string[] args)
         {
             string p = Path.GetFullPath(@"resource\\TP_IT.mptm");
-            IntPtr moduleExt = ModuleAPI.LoadFromFile(p);
-            IntPtr moduleStd = ModuleAPI.GetStdModule(moduleExt);
+             moduleExt = ModuleAPI.LoadFromFile(p);
+             moduleStd = ModuleAPI.GetStdModule(moduleExt);
+
+            
             Console.WriteLine("Starting module stream thread yall.");
 
             Task.Run(() => ModuleAPI.StartModuleStream(moduleStd, 5));
@@ -23,6 +33,8 @@ namespace MPTester
             Console.WriteLine("This module has {0} sub songs and {1} channels.",tss,tch);
             Console.WriteLine("Commands:\r\n\texit\r\n\tfadeout <int ch>\r\n\tfadein <int ch>\r\n\tswap <int SongIndex>\r\n\tfswap <int SongIndex>\r\n\tnav <int order> <int row>");
             Console.WriteLine("Starting command thread yall.");
+
+            ModuleAPI.PatternStarted += ModuleAPI_PatternStarted;
 
             while (true)
             {
@@ -66,6 +78,19 @@ namespace MPTester
                     ModuleAPI.FadeToSubSong(moduleStd,moduleExt, ss,1);
                 }
 
+                if (line.StartsWith("tfswap"))
+                {
+                    string arg = line.Replace("tfswap", "").Trim();
+
+                    bool s = int.TryParse(arg, out int ss);
+
+                    Console.WriteLine("Fading to song {0} on new pattern", ss);
+
+                    nextsub = ss;
+                    triggerCalled1 = true;
+                    triggerRan1 = false;
+                }
+
                 if (line.StartsWith("swap"))
                 {
                     string arg = line.Replace("swap", "").Trim();
@@ -76,7 +101,18 @@ namespace MPTester
 
                     ModuleAPI.SetSubSong(moduleStd,ss);
                 }
+                if (line.StartsWith("tswap"))
+                {
+                    string arg = line.Replace("tswap", "").Trim();
 
+                    bool s = int.TryParse(arg, out int ss);
+
+                    Console.WriteLine("switching to song {0} on new pattern event", ss);
+
+                    nextsub = ss;
+                    triggerCalled = true;
+                    triggerRan = false;
+                }
                 if (line.StartsWith("nav"))
                 {
                     string[] ags = line.Replace("nav", "").Trim().Split(' ');
@@ -104,6 +140,24 @@ namespace MPTester
             Console.WriteLine("Terminating");
 
 
+        }
+
+        private static void ModuleAPI_PatternStarted(object sender, PatternEventArgs e)
+        {
+            Console.WriteLine("Start: pattern {0} - Order {1}",e.Pattern,e.Order);
+
+            if (triggerCalled && !triggerRan)
+            {
+                ModuleAPI.SetSubSong(moduleStd, nextsub);
+                triggerCalled = false;
+                triggerRan = true;
+            }
+            if (triggerCalled1 && !triggerRan1)
+            {
+                ModuleAPI.FadeToSubSong(moduleStd,moduleExt,nextsub,1);
+                triggerCalled1 = false;
+                triggerRan1 = true;
+            }
         }
     }
 }
