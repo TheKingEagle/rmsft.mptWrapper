@@ -11,4 +11,4 @@ https://hcs64.com/mboard/forumlong.php?showthread=25562&lastpage
 the copyright notice above ONLY applies to the compositions. Sample/instrument/voices are property of the respected individuals. 
 If you use this for anything, please ensure proper credit for the compositional work & instruments are given.
 
-For legal purposes, I would avoid using it for comercial use as well, just to be safe.
+For legal reasons, I would avoid using it for comercial use as well, just to be safe.
