@@ -16,8 +16,11 @@ namespace rmsft.mptWrapper
     public static class ModuleAPI
     {
         public static event EventHandler<PatternEventArgs> PatternStarted;
+        public static event EventHandler<PatternEventArgs> PatternEnded;
+        public static event EventHandler<PatternEventArgs> PatternRowChanged;
         private static Mutex moduleMutex = new Mutex();
         private static bool firedPatstart = false;
+        private static bool firedPatEnd = false;
 
         /// <summary>
         /// Load an openMPT module from file
@@ -65,15 +68,15 @@ namespace rmsft.mptWrapper
             
             openmpt_module_set_repeat_count(mod_std, -1);
             openmpt_module_ctl_set_boolean(mod_std, "seek.sync_samples", true);
-            openmpt_module_ctl_set_text(mod_std, "play.at_end", "continue");
+            openmpt_module_ctl_set_text(mod_std, "play.at_end", "stop");
             // Initialize the output device and stream provider
             var waveOut = new WaveOutEvent();
             waveOut.DesiredLatency = 60;
-            var waveProvider = new BufferedWaveProvider(new WaveFormat(44100,16,2));
+            var waveProvider = new BufferedWaveProvider(new WaveFormat(44100,2));
             waveProvider.DiscardOnBufferOverflow = false;
             waveProvider.ReadFully = true;
             waveProvider.BufferDuration = TimeSpan.FromMilliseconds(60);
-           
+            int lrow = -1;
             // Start the playback loop
 
             while (true)
@@ -81,20 +84,38 @@ namespace rmsft.mptWrapper
                 moduleMutex.WaitOne();
 
                 // Read the next stereo sample block from the module
-                var buffer = new short[4096];
+                var buffer = new short[4];
                 //Why is this the way it is? 44100 sample rate, but 2 channels? and what is count?
-                var samplesRead = openmpt_module_read_interleaved_stereo(mod_std,88200, 2, buffer);
+                var samplesRead = openmpt_module_read_interleaved_stereo(mod_std,44100*2, 2, buffer);
 
                 int row = openmpt_module_get_current_row(mod_std);
 
                 if(row == 0 && !firedPatstart)
                 {
-                    Task.Run(()=>PatternStarted?.Invoke(mod_std, new PatternEventArgs(openmpt_module_get_current_pattern(mod_std), openmpt_module_get_current_order(mod_std))));//spawn new event thread because pain?
+                    Task.Run(()=>PatternStarted?.Invoke(mod_std, new PatternEventArgs(openmpt_module_get_current_pattern(mod_std), openmpt_module_get_current_order(mod_std),row,openmpt_module_get_selected_subsong(mod_std))));
                     firedPatstart = true;
                 }
                 if(row > 0)
                 {
                     firedPatstart = false;
+                }
+                int lastRowindex = GetPatternRowCount(mod_std, openmpt_module_get_current_pattern(mod_std)) - 1;
+                if (row ==  lastRowindex&& !firedPatEnd)
+                {
+                    Task.Run(()=>PatternEnded?.Invoke(mod_std, new PatternEventArgs(openmpt_module_get_current_pattern(mod_std), openmpt_module_get_current_order(mod_std),row,openmpt_module_get_selected_subsong(mod_std))));
+
+                    firedPatEnd = true;
+                }
+                else
+                {
+                    firedPatEnd = false;
+                }
+
+                if(row != lrow)
+                {
+                    Task.Run(() => PatternRowChanged?.Invoke(mod_std, new PatternEventArgs(openmpt_module_get_current_pattern(mod_std), openmpt_module_get_current_order(mod_std), row, openmpt_module_get_selected_subsong(mod_std))));
+                    lrow = row;
+
                 }
 
                 // If there are no more samples to read, restart the subsong, but this is just debug.
@@ -110,7 +131,7 @@ namespace rmsft.mptWrapper
                 Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
 
                 // Send the sample buffer to the output stream, but wait until buffer has free space.
-                // I am probably doing this wrong.
+                // Seeing as how if this isn't here, the buffer will be full.
                 SpinWait.SpinUntil(() => waveProvider.BufferLength - waveProvider.BufferedBytes > bytes.Length);
                 
                 waveProvider.AddSamples(bytes, 0, bytes.Length);
