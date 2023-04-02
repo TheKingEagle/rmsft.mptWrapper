@@ -16,6 +16,8 @@ namespace MPTester
         static int nextsub = 0;
         private static bool triggerCalled1;
         private static bool triggerRan1;
+        private static bool triggerCalled3;
+        private static bool triggerRan3;
 
         static void Main(string[] args)
         {
@@ -35,6 +37,8 @@ namespace MPTester
             Console.WriteLine("Starting command thread yall.");
 
             ModuleAPI.PatternStarted += ModuleAPI_PatternStarted;
+            ModuleAPI.PatternEnded += ModuleAPI_PatternEnded;
+            ModuleAPI.PatternRowChanged += ModuleAPI_PatternRowChanged;
 
             while (true)
             {
@@ -107,11 +111,23 @@ namespace MPTester
 
                     bool s = int.TryParse(arg, out int ss);
 
-                    Console.WriteLine("switching to song {0} on new pattern event", ss);
+                    Console.WriteLine("switching to song {0} on pattern start event", ss);
 
                     nextsub = ss;
                     triggerCalled = true;
                     triggerRan = false;
+                }
+                if (line.StartsWith("eswap"))
+                {
+                    string arg = line.Replace("eswap", "").Trim();
+
+                    bool s = int.TryParse(arg, out int ss);
+
+                    Console.WriteLine("switching to song {0} on pattern end event", ss);
+
+                    nextsub = ss;
+                    triggerCalled3 = true;
+                    triggerRan3 = false;
                 }
                 if (line.StartsWith("nav"))
                 {
@@ -142,9 +158,28 @@ namespace MPTester
 
         }
 
+        private static void ModuleAPI_PatternRowChanged(object sender, PatternEventArgs e)
+        {
+            //Console.WriteLine("ROW {0:000} | PATTERN {1:000} | ORDER {2:000} | SONG {3:000}", e.Row, e.Pattern, e.Order, e.SubSong);
+            //if(e.SubSong == 3 && e.Row == 127 && e.Order == 5)
+            //{
+            //    ModuleAPI.SetOrderRow(moduleStd, 19, 0);
+            //}
+        }
+
+        private static void ModuleAPI_PatternEnded(object sender, PatternEventArgs e)
+        {
+            if (triggerCalled3 && !triggerRan3)
+            {
+                ModuleAPI.SetSubSong(moduleStd, nextsub);
+                triggerCalled3 = false;
+                triggerRan3 = true;
+            }
+        }
+
         private static void ModuleAPI_PatternStarted(object sender, PatternEventArgs e)
         {
-            Console.WriteLine("Start: pattern {0} - Order {1}",e.Pattern,e.Order);
+            //Console.WriteLine("Start: pattern {0} - Order {1}",e.Pattern,e.Order);
 
             if (triggerCalled && !triggerRan)
             {
