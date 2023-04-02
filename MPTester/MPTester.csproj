@@ -51,6 +51,9 @@
     <Content Include="resource\TP_IT.mptm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="resource\TP_IT_README.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\rmsft.mptWrapper\rmsft.mptWrapper.csproj">
