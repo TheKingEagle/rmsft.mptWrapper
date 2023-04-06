@@ -47,6 +47,30 @@ namespace rmsft.mptWrapper
         }
 
         /// <summary>
+        /// Load an openMPT module from byte array
+        /// </summary>
+        /// <param name="filepath">path on filesystem</param>
+        /// <returns>Handle to the new mod_ext</returns>
+        public static IntPtr LoadFromBuffer(byte[] moduleData)
+        {
+
+            
+            // Allocate a block of memory in unmanaged space to hold the module data
+            IntPtr moduleDataPtr = Marshal.AllocHGlobal(moduleData.Length);
+
+            // Copy the module data from managed to unmanaged memory
+            Marshal.Copy(moduleData, 0, moduleDataPtr, moduleData.Length);
+
+            // Call the openmpt_module_create_from_memory function to create the module
+            IntPtr module = openmpt_module_ext_create_from_memory(moduleDataPtr, (uint)moduleData.Length, null, IntPtr.Zero, null, IntPtr.Zero, out int error, out IntPtr msg, new openmpt_module_initial_ctl());
+
+            // Free the memory allocated for the module data
+            Marshal.FreeHGlobal(moduleDataPtr);
+
+            return module;
+        }
+
+        /// <summary>
         /// Creates a standard module for use in standard openMPT methods.
         /// </summary>
         /// <param name="mod_ext">the handle to the module loaded.</param>
@@ -65,7 +89,7 @@ namespace rmsft.mptWrapper
         /// <param name="subsongIndex">which sub-song to start on</param>
         public static void StartModuleStream(IntPtr mod_std, int subsongIndex)
         {
-            
+            openmpt_module_select_subsong(mod_std, subsongIndex);
             openmpt_module_set_repeat_count(mod_std, -1);
             openmpt_module_ctl_set_boolean(mod_std, "seek.sync_samples", true);
             openmpt_module_ctl_set_text(mod_std, "play.at_end", "stop");
