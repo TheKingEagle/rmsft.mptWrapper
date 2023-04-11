@@ -293,6 +293,67 @@ namespace rmsft.mptWrapper
             }
         }
 
+
+        /// <summary>
+        /// Switch songs at specific position but fade out first.
+        /// Pattern commands take priority here.
+        /// </summary>
+        /// <param name="mod_std">handle to your module.</param>
+        /// <param name="mod_ext">handle to your ext-module.</param>
+        /// <param name="songIndex">the target song index.</param>
+        /// <param name="order">offset pattern order.</param>
+        /// <param name="fade_seconds">how long in seconds the fade should be.</param>
+        public static void FadeToSubSong(IntPtr mod_std, IntPtr mod_ext, int songIndex,int order, double fade_seconds)
+        {
+
+            IntPtr interfacePtr = Marshal.AllocHGlobal(Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
+            bool result = openmpt_module_ext_get_interface(mod_ext, "interactive", interfacePtr, (UIntPtr)Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
+            if (result)
+            {
+
+                openmpt_module_ext_interface_interactive interfaceData = Marshal.PtrToStructure<openmpt_module_ext_interface_interactive>(interfacePtr);
+
+                // Calculate volume increment per millisecond
+                double OldVolume = 1;
+                double active = OldVolume;
+                double volumeIncrement = (0 - OldVolume) / (fade_seconds * 1000);
+                int interval = 60; // in milliseconds
+                double incrementPerInterval = volumeIncrement * interval;
+                Stopwatch s = new Stopwatch();
+                // Start a timer to update the volume at regular intervals
+                Timer tt = null;
+                tt = new Timer(_ => {
+                    double currentVolume = active;
+                    double newVolume = currentVolume + incrementPerInterval;
+                    if (volumeIncrement <= 0 && newVolume <= 0)
+                    {
+
+                        moduleMutex.WaitOne();
+                        openmpt_module_select_subsong(mod_std, songIndex);
+                        openmpt_module_set_position_order_row(mod_std, order, 0);
+                        interfaceData.set_global_volume(mod_ext, 1);
+                        moduleMutex.ReleaseMutex();
+                        s.Stop();
+                        Console.WriteLine("Executed fadeout in {0} ms", s.ElapsedMilliseconds);
+                        tt.Dispose();
+                    }
+                    else
+                    {
+                        active = newVolume;
+                        moduleMutex.WaitOne();
+                        interfaceData.set_global_volume(mod_ext, active);
+                        moduleMutex.ReleaseMutex();
+
+
+                    }
+
+                }, null, 0, interval);
+
+                s.Start();
+                Marshal.FreeHGlobal(interfacePtr);
+            }
+        }
+
         #endregion
 
         #region libopenmpt interactives
