@@ -303,7 +303,7 @@ namespace rmsft.mptWrapper
         /// <param name="songIndex">the target song index.</param>
         /// <param name="order">offset pattern order.</param>
         /// <param name="fade_seconds">how long in seconds the fade should be.</param>
-        public static void FadeToSubSong(IntPtr mod_std, IntPtr mod_ext, int songIndex,int order, double fade_seconds)
+        public static void FadeToSubSong(IntPtr mod_std, IntPtr mod_ext, int songIndex,int order, double fade_seconds, int row = 0)
         {
 
             IntPtr interfacePtr = Marshal.AllocHGlobal(Marshal.SizeOf<openmpt_module_ext_interface_interactive>());
@@ -330,7 +330,7 @@ namespace rmsft.mptWrapper
 
                         moduleMutex.WaitOne();
                         openmpt_module_select_subsong(mod_std, songIndex);
-                        openmpt_module_set_position_order_row(mod_std, order, 0);
+                        openmpt_module_set_position_order_row(mod_std, order, row);
                         interfaceData.set_global_volume(mod_ext, 1);
                         moduleMutex.ReleaseMutex();
                         s.Stop();
@@ -381,6 +381,8 @@ namespace rmsft.mptWrapper
         public static int GetPatternCount(IntPtr mod_std) => openmpt_module_get_num_patterns(mod_std);
         public static int GetPatternRowCount(IntPtr mod_std,int pattern_index) => openmpt_module_get_pattern_num_rows(mod_std,pattern_index);
         public static int GetOrderCount(IntPtr mod_std) => openmpt_module_get_num_orders(mod_std);
+        public static int GetCurrentOrder(IntPtr mod_std) => openmpt_module_get_current_order(mod_std);
+        public static int GetCurrentRow(IntPtr mod_std) => openmpt_module_get_current_row(mod_std);
         #endregion
     }
 
